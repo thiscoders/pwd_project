@@ -86,6 +86,9 @@ class Sqlite3Factory:
         """
         db_conn = self.obtain_db_conn()
         label = input('input label: ').strip()
+        if label == '':
+            return False
+
         login = input('input login: ').strip()
         password = input('input password: ').strip()
         question1 = False
@@ -125,12 +128,17 @@ class Sqlite3Factory:
         cursor.execute(insert_sql, insert_data)
         db_conn.commit()
 
+        return True
+
     def lookup_pwd(self):
         """
         查询密码
         :return:
         """
         label = input('input label: ').strip()
+        if label == '':
+            return False
+
         db_conn = self.obtain_db_conn()
         cursor = db_conn.cursor()
         lookup_sql = """
@@ -153,8 +161,8 @@ class Sqlite3Factory:
         result = cursor.fetchall()
         if len(result) == 0:
             print('\033[1;31;mno matching record!\033[0m')
+            return True
         single_rec = result[0]
-        label = single_rec[1]
         login = single_rec[2]
         password = single_rec[3]
         ismore = single_rec[4]
@@ -166,13 +174,29 @@ class Sqlite3Factory:
         answer3 = single_rec[10]
         memo = single_rec[11]
 
-        print('\033[1;31;m--------------------this is begin of result!--------------------\033[0m')
         print('\033[1;34;m' + str(login) + ' = ' + str(password) + ' = ' + str(memo) + '\033[0m')
         if ismore == 'Y':
             print('\033[1;34;m' + str(question1) + ' = ' + str(answer1) + '\033[0m')
             print('\033[1;34;m' + str(question2) + ' = ' + str(answer2) + '\033[0m')
             print('\033[1;34;m' + str(question3) + ' = ' + str(answer3) + '\033[0m')
-        print('\033[1;31;m---------------------this is end of result!---------------------\033[0m')
+        return True
+
+    def list_all_label(self):
+        """
+        列出所有标题
+        :return:
+        """
+        db_conn = self.obtain_db_conn()
+        cursor = db_conn.cursor()
+        label_sql = """
+        select label from pwd_store where 1=1 order by id desc;"""
+        cursor.execute(label_sql)
+        results = cursor.fetchall()
+        label_list = []
+        for rec in results:
+            label_list.append(rec[0])
+
+        print(label_list)
 
     def list_all_pwd(self):
         """
@@ -198,6 +222,7 @@ class Sqlite3Factory:
         where 1=1 order by id desc;"""
         cursor.execute(lookup_sql)
         results = cursor.fetchall()
+        print('\033[1;31;m--------------------this is begin of result!--------------------\033[0m')
         for rec in results:
             id = rec[0]
             label = rec[1]
@@ -211,6 +236,14 @@ class Sqlite3Factory:
             question3 = rec[9]
             answer3 = rec[10]
             memo = rec[11]
+            print('\033[1;34;m' + str(id) + ' = ' + str(label) + '\033[0m')
+            print('\033[1;34;m' + str(login) + ' = ' + str(password) + ' = ' + str(memo) + '\033[0m')
+            if ismore == 'Y':
+                print('\033[1;34;m' + str(question1) + ' = ' + str(answer1) + '\033[0m')
+                print('\033[1;34;m' + str(question2) + ' = ' + str(answer2) + '\033[0m')
+                print('\033[1;34;m' + str(question3) + ' = ' + str(answer3) + '\033[0m')
+            print('\033[1;31;m---------------------------------------------------------\033[0m')
+        print('\033[1;31;m---------------------this is end of result!---------------------\033[0m')
 
     def update_pwd(self):
         """
@@ -218,6 +251,9 @@ class Sqlite3Factory:
         :return:
         """
         label = input('input delete label: ').strip()
+
+        if label == '':
+            return False
 
         lookup_sql = """
         select 
@@ -306,6 +342,7 @@ class Sqlite3Factory:
 
         cursor.execute(update_sql, update_data)
         db_conn.commit()
+        return True
 
     def delete_pwd(self):
         """
@@ -314,12 +351,15 @@ class Sqlite3Factory:
         """
         db_conn = self.obtain_db_conn()
         label = input('input delete label: ').strip()
+        if label == '':
+            return False
         cursor = db_conn.cursor()
         delete_sql = """delete from pwd_store where label= (:label);"""
         delete_data = {'label': label}
         cursor.execute(delete_sql, delete_data)
         cursor.close()
         db_conn.commit()
+        return True
 
 
 def do_it():
@@ -341,29 +381,47 @@ def do_it():
             print('bye bye!')
             break
 
+        elif choice == 'help' or choice == 'h':
+            try:
+                factory.list_all_pwd()
+            except Exception as err:
+                print('lookup occur error:' + str(err))
+
         elif choice == 'append' or choice == 'a':  # todo append
             try:
-                factory.append_pwd()
-                print('append success!')
+                while True:
+                    is_conn = factory.append_pwd()
+                    if not is_conn:
+                        break
+                    print('append success!')
             except Exception as err:
                 print('append occur error:' + str(err))
 
         elif choice == 'delete' or choice == 'd':  # todo delete
             try:
-                factory.delete_pwd()
-                print('delete success!')
+                while True:
+                    is_conn = factory.delete_pwd()
+                    if not is_conn:
+                        break
+                    print('delete success!')
             except Exception as err:
                 print('delete occur error:' + str(err))
 
         elif choice == 'update' or choice == 'u':  # todo update
             try:
-                factory.update_pwd()
+                while True:
+                    is_conn = factory.update_pwd()
+                    if not is_conn:
+                        break
             except Exception as err:
                 print('update occur error:' + str(err))
 
         elif choice == 'lookup' or choice == 'l':  # todo lookup
             try:
-                factory.lookup_pwd()
+                while True:
+                    is_conn = factory.lookup_pwd()
+                    if not is_conn:
+                        break
             except Exception as err:
                 print('lookup occur error:' + str(err))
 
@@ -372,6 +430,13 @@ def do_it():
                 factory.list_all_pwd()
             except Exception as err:
                 print('lookup occur error:' + str(err))
+
+        elif choice == 'listlabel' or choice == 'll':  # todo list title
+            try:
+                factory.list_all_label()
+            except Exception as err:
+                print('lookup occur error:' + str(err))
+
         else:
             pass
 
